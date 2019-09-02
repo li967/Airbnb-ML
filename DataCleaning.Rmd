@@ -1,0 +1,75 @@
+---
+title: "Data Cleaning"
+author: "Yuxuan Li"
+date: "8/28/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(zoo)
+library(lubridate)
+library(ggplot2)
+library(stringr)
+```
+
+# processing data and save to "bnb_data.Rdata"
+* date (as data, date length between host_since and first review)
+* ammenity
+* zipcode (add 0 to beginning)
+
+```{r readdata}
+
+bnb.raw <- read.csv("airbnb_data.csv") %>%
+  mutate(price = exp(log_price))
+
+bnb.data <- bnb.raw %>% # date
+  mutate(host_since   = as.Date(host_since,   format = "%m/%d/%y"),
+         first_review = as.Date(first_review, format = "%m/%d/%y"),
+         last_review  = as.Date(last_review,  format = "%m/%d/%y")) %>%
+  mutate(post_wait = time_length(host_since %--% first_review, unit = "day")) %>%
+  mutate(zipcode = as.character(zipcode)) %>% # zipcode
+  mutate(zipcode = str_pad(zipcode,5,side="left",pad="0")) %>%
+  mutate(amenities = as.character(amenities)) %>%
+  mutate(am_Internet = (str_detect(amenities, "Internet") | 
+           str_detect(amenities, "Wireless Internet")),
+         am_TV = (str_detect(amenities, "TV") | str_detect(amenities, "Cable TV")),
+         am_AC = str_detect(amenities, "Air conditioning"),
+         am_Kitchen = str_detect(amenities, "Kitchen"),
+         am_Heating = str_detect(amenities, "Heating"),
+         am_Washer = str_detect(amenities, "Washer"),
+         am_Dryer = str_detect(amenities, "Dryer"),
+         am_Parking = str_detect(amenities, "Free parking on premises"),
+         am_Shampoo = str_detect(amenities, "Shampoo"),
+         am_Essentials = str_detect(amenities, "Essentials"))
+
+save(bnb.data, file = "bnb_data.Rdata")
+```
+
+
+```{r summ}
+
+summary(bnb.data)
+
+test.data <- bnb.data %>%
+  filter(post_wait < 0) #22 obs has host_since > first_review...
+
+```
+
+
+
+```{r data vis}
+
+attach(bnb.data)
+
+ggplot(bnb.data,aes(x=post_wait))+geom_density()
+hist(post_wait)
+hist(price)
+hist(accommodates)
+hist(beds)
+hist(bedrooms)
+
+```

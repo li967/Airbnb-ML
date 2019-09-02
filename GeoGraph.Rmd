@@ -1,0 +1,45 @@
+---
+title: "GeoGraph"
+author: "Yuxuan Li"
+date: "9/2/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+
+```{r USmap}
+library(ggplot2)
+library(maps)
+us <- map_data("state")
+# head(states_map)
+```
+
+```{r bnbdata}
+load("bnb_data.Rdata") 
+```
+
+```{r map}
+# https://austinwehrwein.com/digital-humanities/creating-a-density-map-in-r-with-zipcodes/
+
+summary(bnb.data$city)
+
+ggplot(bnb.data,aes(longitude,latitude)) +
+  geom_polygon(data=us,aes(x=long,y=lat,group=group),color='gray',fill=NA,alpha=.35)+
+  geom_point(aes(color = price),size=.15,alpha=.25) +
+  xlim(-125,-65)+ylim(20,50)
+
+ca <- map_data("county") %>%
+  filter(region == "california")
+bnb.ca <- filter(bnb.data, city == "LA" | city == "SF")
+summary(ca)
+ggplot(bnb.ca,aes(longitude,latitude)) +
+  geom_polygon(data=ca,aes(x=long,y=lat,group=group),color='gray',fill=NA,alpha=.35)+
+  geom_point(aes(color = price),size=.15,alpha=.25) +
+  xlim(-125,-114)+ylim(32,43) + 
+  coord_fixed(1.3)
+```
