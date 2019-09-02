@@ -23,12 +23,15 @@ library(ggplot2)
 
 ```{r summary}
 summary(bnb.data)
+
+#pairs(bnb.data)
 ```
 
 # 1.Number of amenity
 
 First of first, take a look of numeric characters on price, including the numbers of **accomodates, beds, bedrooms, and bathrooms**. Do scatter plot and violin plot of (log-)price on each varaiable. 
 
+165 observations removed due to NA's. 
 
 ### Conclusion:
 
@@ -40,7 +43,7 @@ First of first, take a look of numeric characters on price, including the number
 ```{r no. amenity}
 amen.data <- bnb.data %>%
   select(price, log_price, accommodates, beds, bedrooms, bathrooms) %>%
-  na.omit()
+  na.omit() # 35835 obs
 
 summary(amen.data)
 
@@ -50,6 +53,58 @@ par(mfrow = c(2, 2))
 for (i in 3:6){
   plot(amen.data[,2] ~ amen.data[,i],
         xlab = colnames(amen.data)[i], ylab = colnames(amen.data)[2])
+}
+
+# better(?) version
+for (i in 3:6){
+  p <- ggplot(amen.data,aes(x = as.factor(amen.data[,i]), y = amen.data[,2])) + 
+    geom_violin(scale = "area") +
+    xlab(colnames(amen.data)[i]) +
+    ylab(colnames(amen.data)[2])
+  
+  print(p)
+}
+
+
+# price to ammenity numbers
+par(mfrow = c(2, 2))
+for (i in 3:6){
+plot(amen.data[,1] ~ amen.data[,i],
+xlab = colnames(amen.data)[i], ylab = colnames(amen.data)[1])
+}
+
+# better(?) version
+for (i in 3:6){
+  p <- ggplot(amen.data,aes(x = as.factor(amen.data[,i]), y = amen.data[,1])) + 
+    geom_violin(scale = "area") +
+    xlab(colnames(amen.data)[i]) +
+    ylab(colnames(amen.data)[1])
+  
+  print(p)
+}
+
+```
+
+# 2. Hosts and Reviews
+
+Now consider numerical variables **host_response_rate, number_of_reviews, review_scores_rating**, and logical variables **host_has_profile_pic** and **host_identity_verified**.
+
+Note: if number_of_reviews is 0, review_scores_rating is NA.
+
+```{r host&review}
+hore.data <- bnb.data %>%
+  select(price, log_price, 
+         host_response_rate, number_of_reviews, review_scores_rating,
+         host_has_profile_pic, host_identity_verified) %>%
+  mutate(review_scores_rating)
+summary(hore.data)
+
+
+# log price to host and reviews
+par(mfrow = c(2, 3))
+for (i in 3:7){
+  plot(hore.data[,2] ~ hore.data[,i],
+        xlab = colnames(hore.data)[i], ylab = colnames(hore.data)[2])
 }
 
 # better(?) version

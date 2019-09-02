@@ -20,6 +20,7 @@ library(stringr)
 * date (as data, date length between host_since and first review)
 * ammenity
 * zipcode (add 0 to beginning)
+* host_response_rate: percentage to digits
 
 ```{r readdata}
 
@@ -45,6 +46,11 @@ bnb.data <- bnb.raw %>% # date
          am_Parking = str_detect(amenities, "Free parking on premises"),
          am_Shampoo = str_detect(amenities, "Shampoo"),
          am_Essentials = str_detect(amenities, "Essentials"))
+
+bnb.data <- bnb.data %>%
+  mutate(host_response_rate = as.character(host_response_rate),
+         host_response_rate = str_sub(host_response_rate,1L,-2L), #remove "%"
+         host_response_rate = as.numeric(host_response_rate)*0.01) # trans to digit
 
 save(bnb.data, file = "bnb_data.Rdata")
 ```
