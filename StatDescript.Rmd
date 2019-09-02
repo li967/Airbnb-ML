@@ -1,0 +1,83 @@
+---
+title: "StatDescript"
+author: "Yuxuan Li"
+date: "9/2/2019"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+    math: katex
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+
+# upload data
+load("bnb_data.Rdata")
+
+# upload packages
+library(dplyr)
+library(ggplot2)
+```
+
+```{r summary}
+summary(bnb.data)
+```
+
+# 1.Number of amenity
+
+First of first, take a look of numeric characters on price, including the numbers of **accomodates, beds, bedrooms, and bathrooms**. Do scatter plot and violin plot of (log-)price on each varaiable. 
+
+
+### Conclusion:
+
+* The log price and those numbers have roughly positive relationship (sort of sigmoid). I think quadratic term might be necessary in linear regression. 
+
+* Further controls are needed. 
+
+
+```{r no. amenity}
+amen.data <- bnb.data %>%
+  select(price, log_price, accommodates, beds, bedrooms, bathrooms) %>%
+  na.omit()
+
+summary(amen.data)
+
+
+# log price to ammenity numbers
+par(mfrow = c(2, 2))
+for (i in 3:6){
+  plot(amen.data[,2] ~ amen.data[,i],
+        xlab = colnames(amen.data)[i], ylab = colnames(amen.data)[2])
+}
+
+# better(?) version
+for (i in 3:6){
+  p <- ggplot(amen.data,aes(x = as.factor(amen.data[,i]), y = amen.data[,2])) + 
+    geom_violin(scale = "area") +
+    xlab(colnames(amen.data)[i]) +
+    ylab(colnames(amen.data)[2])
+  
+  print(p)
+}
+
+
+# price to ammenity numbers
+par(mfrow = c(2, 2))
+for (i in 3:6){
+plot(amen.data[,1] ~ amen.data[,i],
+xlab = colnames(amen.data)[i], ylab = colnames(amen.data)[1])
+}
+
+# better(?) version
+for (i in 3:6){
+  p <- ggplot(amen.data,aes(x = as.factor(amen.data[,i]), y = amen.data[,1])) + 
+    geom_violin(scale = "area") +
+    xlab(colnames(amen.data)[i]) +
+    ylab(colnames(amen.data)[1])
+  
+  print(p)
+}
+
+```
