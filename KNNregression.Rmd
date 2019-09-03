@@ -1,0 +1,14 @@
+---
+title: "KNN"
+author: "Yuxuan Li"
+date: "9/3/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list= ls())
+knitr::opts_chunk$set(echo = TRUE)
+
+load("bnb_data.Rdata")
+load("bnb_data.Rdata")
+```

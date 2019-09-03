@@ -77,7 +77,14 @@ bnb.data <- bnb.data %>%
   mutate(has_review = ifelse(number_of_reviews==0,0,1),
          has_review = as.factor(has_review))
 
-save(bnb.data, file = "bnb_data.Rdata")
+# split training and testing
+set.seed(1)
+train <- sample(nrow(bnb.data), 0.5*nrow(bnb.data))
+train.data <- bnb.data[train,]
+test.data <- bnb.data[-train,]
+
+save(bnb.data,train.data,test.data, file = "bnb_data.Rdata")
+
 ```
 
 ```{r amme}
