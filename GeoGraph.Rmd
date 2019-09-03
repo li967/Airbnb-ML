@@ -8,6 +8,9 @@ output: html_document
 ```{r setup, include=FALSE}
 rm(list = ls())
 knitr::opts_chunk$set(echo = TRUE)
+
+load("bnb_data.Rdata") 
+
 library(dplyr)
 ```
 
@@ -19,11 +22,8 @@ us <- map_data("state")
 # head(states_map)
 ```
 
-```{r bnbdata}
-load("bnb_data.Rdata") 
-```
 
-```{r map}
+```{r usmap}
 # https://austinwehrwein.com/digital-humanities/creating-a-density-map-in-r-with-zipcodes/
 
 summary(bnb.data$city)
@@ -42,4 +42,62 @@ ggplot(bnb.ca,aes(longitude,latitude)) +
   geom_point(aes(color = price),size=.15,alpha=.25) +
   xlim(-125,-114)+ylim(32,43) + 
   coord_fixed(1.3)
+```
+
+```{r NYmap}
+
+# prepare data, long and lat
+NY.data <- filter(bnb.data, city == "NYC")
+l <- min(NY.data$longitude); r <- max(NY.data$longitude)
+b <- min(NY.data$latitude);  t <- max(NY.data$latitude)
+samp <- sample(nrow(NY.data), 0.05*nrow(NY.data))
+NY.small <- NY.data[samp,]
+
+# https://cosx.org/2013/01/drawing-map-in-r-era/
+
+library(ggmap)
+library(mapproj)
+
+NYmap <- get_stamenmap(bbox = c(left   = l - 0.02, right  = r + 0.02,
+                                bottom = b - 0.02, top    = t + 0.02),
+                       maptype = "toner-lite")
+
+ggmap(NYmap) +
+    geom_point(data = NY.small, aes(x = longitude, y = latitude,
+                 color = price, size = price), alpha = 0.5) #+ 
+    #geom_polygon(data = NY.small, 
+    #             aes(x = longitude, y = latitude, group = neighbourhood), 
+    #             colour = "black", fill = "grey", alpha = 0.2)
+  
+
+```
+
+```{r city map}
+
+CT_map <- function(city_code){
+  # prepare data, long and lat
+  CT.data <- filter(bnb.data, city == city_code)
+  l <- min(CT.data$longitude); r <- max(CT.data$longitude)
+  b <- min(CT.data$latitude);  t <- max(CT.data$latitude)
+  # sample data
+  samp <- sample(nrow(CT.data), 0.05*nrow(CT.data))
+  CT.small <- CT.data[samp,]
+  
+  CTmap <- get_stamenmap(bbox = c(left   = l - 0.02, right  = r + 0.02,
+                                  bottom = b - 0.02, top    = t + 0.02),
+                         maptype = "toner-lite")
+  
+  ggmap(CTmap) +
+      geom_point(data = CT.small, aes(x = longitude, y = latitude,
+                   color = price, size = price), alpha = 0.5) + 
+      ggtitle("Price distribution", paste0(city_code))
+
+}
+
+CT_map("NYC");ggsave("NYC.png")
+CT_map("LA") ;ggsave("LA.png")
+CT_map("SF") ;ggsave("SF.png")
+CT_map("Chicago");ggsave("Chicago.png")
+CT_map("Boston");ggsave("Boston.png")
+CT_map("DC");ggsave("DC.png")
 ```

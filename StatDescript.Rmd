@@ -242,7 +242,7 @@ ggplot(bnb.data, aes(x = city, y = log_price)) +
 
 Does AC matter? Does shampoo matter?
 
-```{r amme}
+```{r amen}
 shampoo.data <- bnb.data %>%
   select(log_price, starts_with("am_"))
 
@@ -256,3 +256,25 @@ for (i in 2:11){
 
 
 ```
+
+# C. Rate with amenity?
+
+More amenites listed means higher satisfication?
+
+- One thing for sure: those who have no review tend to price higher. 
+
+```{r rate amen}
+
+par(mfrow = c(1, 2))
+plot(bnb.data$number_of_amenities,bnb.data$review_scores_rating)
+plot(bnb.data$number_of_amenities, bnb.data$log_price)
+
+ggplot(bnb.data, aes(x = number_of_amenities, y = log_price)) +
+  geom_point(aes(color = review_scores_rating),alpha=I(1/5))  + 
+  scale_y_continuous(limits = c(2,8))
+
+
+
+```
+
+
