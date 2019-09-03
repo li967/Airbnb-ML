@@ -24,6 +24,10 @@ library("tm")
 library("SnowballC")
 library("wordcloud")
 library("RColorBrewer")
+
+# read airbnb.data from csv file
+bnb.raw <- read.csv("airbnb_data.csv") %>%
+  mutate(price = exp(log_price))
 ```
 
 # processing data and save to "bnb_data.Rdata"
@@ -33,10 +37,6 @@ library("RColorBrewer")
 * host_response_rate: percentage to digits
 
 ```{r readdata}
-# read airbnb.data from csv file
-bnb.raw <- read.csv("airbnb_data.csv") %>%
-  mutate(price = exp(log_price))
-
 # deal with date and zipcode
 bnb.data <- bnb.raw %>% # date
   mutate(host_since   = as.Date(host_since,   format = "%m/%d/%y"),
@@ -60,11 +60,11 @@ bnb.data <- bnb.data %>%
          am_Dryer = str_detect(amenities, "Dryer"),
          am_Parking = str_detect(amenities, "Free parking on premises"),
          am_Shampoo = str_detect(amenities, "Shampoo"),
-         am_Smoke = str_detect(amenities, "Smoke Detector"),
+         am_Smoke = str_detect(amenities, "Smoke detector"),
          am_Hangers = str_detect(amenities, "Hangers"),
          am_Iron = str_detect(amenities, "Iron"),
-         am_Fire = str_detect(amenities, "Fire Extinguisher"),
-         am_Firstaid = str_detect(amenities, "First Aid Kit"))
+         am_Fire = str_detect(amenities, "Fire extinguisher"),
+         am_Firstaid = str_detect(amenities, "First aid kit"))
 
 # deal with '%'
 bnb.data <- bnb.data %>%
@@ -104,6 +104,8 @@ m <- as.matrix(dtm)
 v <- sort(rowSums(m),decreasing=TRUE)
 d <- data.frame(word = names(v),freq=v)
 head(d, 10)
+
+write.table(d, file = "top_listed_amenity.txt", sep = ",", quote = FALSE, row.names = F)
 
 # Word cloud
 set.seed(1234)
