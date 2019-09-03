@@ -23,18 +23,23 @@ library(stringr)
 * host_response_rate: percentage to digits
 
 ```{r readdata}
-
+# read airbnb.data from csv file
 bnb.raw <- read.csv("airbnb_data.csv") %>%
   mutate(price = exp(log_price))
 
+# deal with date and zipcode
 bnb.data <- bnb.raw %>% # date
   mutate(host_since   = as.Date(host_since,   format = "%m/%d/%y"),
          first_review = as.Date(first_review, format = "%m/%d/%y"),
          last_review  = as.Date(last_review,  format = "%m/%d/%y")) %>%
   mutate(post_wait = time_length(host_since %--% first_review, unit = "day")) %>%
   mutate(zipcode = as.character(zipcode)) %>% # zipcode
-  mutate(zipcode = str_pad(zipcode,5,side="left",pad="0")) %>%
+  mutate(zipcode = str_pad(zipcode,5,side="left",pad="0"))
+
+# deal with amenities
+bnb.data <- bnb.data %>%
   mutate(amenities = as.character(amenities)) %>%
+  mutate(number_of_amenities = 1 + str_count(amenities, ",")) %>%
   mutate(am_Internet = (str_detect(amenities, "Internet") | 
            str_detect(amenities, "Wireless Internet")),
          am_TV = (str_detect(amenities, "TV") | str_detect(amenities, "Cable TV")),
@@ -69,6 +74,8 @@ summary(bnb.data)
 test.data <- bnb.data %>%
   filter(post_wait < 0) #22 obs has host_since > first_review...
 
+test.data <- bnb.data %>%
+  filter(number_of_amenities >= 50)
 ```
 
 
