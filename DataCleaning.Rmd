@@ -35,6 +35,11 @@ bnb.raw <- read.csv("airbnb_data.csv") %>%
 * ammenity
 * zipcode (add 0 to beginning)
 * host_response_rate: percentage to digits
+* quantitative vars:
+  + room_type (Entire house/apt) -> is_Entire
+  + room_type (Entire/Private) -> is_Private
+  + bed_type -> is_RealBed 
+  + Cancellation policy (if somewhat strict) -> is_CancelStrict
 
 ```{r readdata}
 # deal with date and zipcode
@@ -76,6 +81,21 @@ bnb.data <- bnb.data %>%
 bnb.data <- bnb.data %>%
   mutate(has_review = ifelse(number_of_reviews==0,0,1),
          has_review = as.factor(has_review))
+
+# Deal with quantitative data
+bnb.data <- bnb.data %>%
+  mutate(is_Entire = ifelse(room_type == "Entire home/apt", 1,0),
+         is_Private = ifelse(room_type != "Shared room", 1,0),
+         is_RealBed = ifelse(bed_type == "Real Bed",1,0),
+         is_CancelStrict = ifelse((cancellation_policy == "moderate" | 
+                                    cancellation_policy == "flexible"),0,1)) %>%
+  mutate(cleanning_fee = ifelse(cleaning_fee == FALSE,0,1),
+         host_has_profile_pic = ifelse(host_has_profile_pic=="f",0,ifelse(host_has_profile_pic == "t",1, NA)),
+         host_identity_verified = ifelse(host_identity_verified == "f",0,ifelse(host_identity_verified=="t",1,host_identity_verified)),
+         instant_bookable = ifelse(instant_bookable=="t",1,0))
+
+
+
 
 # split training and testing
 set.seed(1)
