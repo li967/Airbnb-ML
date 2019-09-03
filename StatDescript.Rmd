@@ -24,7 +24,7 @@ library(ggplot2)
 ```{r summary}
 summary(bnb.data)
 
-#pairs(bnb.data)
+num.data <- bnb.data
 ```
 
 # 1.Number of amenity
@@ -42,7 +42,8 @@ First of first, take a look of numeric characters on price, including the number
 
 ```{r no. amenity}
 amen.data <- bnb.data %>%
-  select(price, log_price, accommodates, beds, bedrooms, bathrooms) %>%
+  select(price, log_price, accommodates, beds, bedrooms, bathrooms, 
+         has_review, number_of_reviews) %>%
   na.omit() # 35835 obs
 
 summary(amen.data)
@@ -57,8 +58,10 @@ for (i in 3:6){
 
 # better(?) version
 for (i in 3:6){
-  p <- ggplot(amen.data,aes(x = as.factor(amen.data[,i]), y = amen.data[,2])) + 
-    geom_violin(scale = "area") +
+  p <- ggplot(amen.data,
+              aes(x = as.factor(amen.data[,i]), y = amen.data[,2]),
+                  fill = has_review) + 
+    geom_violin(scale = "width") +
     xlab(colnames(amen.data)[i]) +
     ylab(colnames(amen.data)[2])
   
@@ -76,7 +79,8 @@ xlab = colnames(amen.data)[i], ylab = colnames(amen.data)[1])
 # better(?) version
 for (i in 3:6){
   p <- ggplot(amen.data,aes(x = as.factor(amen.data[,i]), y = amen.data[,1])) + 
-    geom_violin(scale = "area") +
+    geom_violin(scale = "width") +
+    geom_smooth(aes(x = amen.data[,i], y = amen.data[,1]),method = "lm") +
     xlab(colnames(amen.data)[i]) +
     ylab(colnames(amen.data)[1])
   
@@ -89,7 +93,10 @@ for (i in 3:6){
 
 Now consider numerical variables **host_response_rate, number_of_reviews, review_scores_rating**, and logical variables **host_has_profile_pic** and **host_identity_verified**.
 
-Note: if number_of_reviews is 0, review_scores_rating is NA.
+Note: if No first_review 
+      -> number_of_reviews = 0
+      -> review_scores_rating is NA.
+      -> No host_response_rate (roughly)
 
 ```{r host&review}
 hore.data <- bnb.data %>%
@@ -107,10 +114,35 @@ for (i in 3:7){
         xlab = colnames(hore.data)[i], ylab = colnames(hore.data)[2])
 }
 
-# better(?) version
+# price to host and reviews
+par(mfrow = c(2, 3))
+for (i in 3:7){
+  plot(hore.data[,1] ~ hore.data[,i],
+        xlab = colnames(hore.data)[i], ylab = colnames(hore.data)[1])
+}
+
+```
+
+# 3. Has Review
+
+**First 5 graphs:**
+Group by has_review. No thing interesting...
+
+**Second 5 graphs:**
+The price of those have no review get a higher price comparing with those have some reviews. I have that feeling... To verify that thought, plot regression line on plots. And...I'm right.
+
+
+
+```{r has review}
+
+summary(bnb.data$has_review)
+
 for (i in 3:6){
-  p <- ggplot(amen.data,aes(x = as.factor(amen.data[,i]), y = amen.data[,2])) + 
-    geom_violin(scale = "area") +
+  p <- ggplot(amen.data,
+              aes(x = as.factor(amen.data[,i]), y = amen.data[,2])) + 
+    geom_violin(aes(x = as.factor(amen.data[,i]), y = amen.data[,2],
+                    fill = has_review),
+                scale = "width") +
     xlab(colnames(amen.data)[i]) +
     ylab(colnames(amen.data)[2])
   
@@ -118,21 +150,109 @@ for (i in 3:6){
 }
 
 
-# price to ammenity numbers
-par(mfrow = c(2, 2))
 for (i in 3:6){
-plot(amen.data[,1] ~ amen.data[,i],
-xlab = colnames(amen.data)[i], ylab = colnames(amen.data)[1])
-}
-
-# better(?) version
-for (i in 3:6){
-  p <- ggplot(amen.data,aes(x = as.factor(amen.data[,i]), y = amen.data[,1])) + 
-    geom_violin(scale = "area") +
+  p <- ggplot(amen.data,
+              aes(x = amen.data[,i], y = amen.data[,2], color = has_review)) + 
+    geom_smooth(method = lm) +
+    geom_jitter() +
     xlab(colnames(amen.data)[i]) +
-    ylab(colnames(amen.data)[1])
+    ylab(colnames(amen.data)[2])
   
   print(p)
 }
+
+# Do the same comparision between review = 0 and review = 1
+# this step is no more than extra
+zero.data <- filter(amen.data, (number_of_reviews == 0 | number_of_reviews == 1))
+
+for (i in 3:6){
+  p <- ggplot(zero.data,
+              aes(x = zero.data[,i], y = zero.data[,2], 
+                  color = as.factor(number_of_reviews))) + 
+    geom_smooth(method = lm) +
+    geom_jitter() +
+    xlab(colnames(zero.data)[i]) +
+    ylab(colnames(zero.data)[2])
+  
+  print(p)
+}
+```
+
+# 4. Do something extra
+
+Our prior insights suggests that review_rate should have some relationship, which was not obvious in the scatter plot. So let do some transformation.
+
+Assume price and bedrooms have linear relationship. Plot (log_)price_per_bdrm on rate. This graph, of cource, only apply to those obs with at least one review, and at least one bdrm.
+
+The result suggests that this section is totally redundant. 
+
+```{r price per accom}
+
+# recall the graph in section 1 to see "linear" relationship of price and bdrm
+i <- 5
+ggplot(amen.data,aes(x = as.factor(amen.data[,i]), y = amen.data[,1])) + 
+    geom_violin(scale = "width") +
+    geom_smooth(aes(x = amen.data[,i], y = amen.data[,1]),method = "lm") +
+    xlab(colnames(amen.data)[i]) +
+    ylab(colnames(amen.data)[1])
+
+per.data <- bnb.data %>%
+  select(price, bedrooms, review_scores_rating) %>%
+  filter(is.na(review_scores_rating)==FALSE & bedrooms>0) %>%
+  mutate(price_per_bdrm = price/bedrooms,
+         log_price_per_bdrm = log(price_per_bdrm)) 
+
+# Ideally the distribution of price_per_bdrm should be really tight
+par(mfrow = c(1, 2))
+hist(per.data$price_per_bdrm)
+hist(per.data$log_price_per_bdrm)
+
+# do the graph
+ggplot(per.data,aes(x = review_scores_rating, y = log_price_per_bdrm)) + 
+  geom_point()
+
+ggplot(per.data,aes(x = review_scores_rating, y = price_per_bdrm)) + 
+  geom_point()
+
+
+
+
+```
+
+***
+
+# A. Brand new section! Differences across cities.
+
+While all the data come from 6 giant cities, as we already know, Ashley insists that conditions in east and west coast (and midwest) are totally different. So let explore a little bit!
+
+First see general (log-)price distributions across cities. The difference is not quiet big. 
+
+```{r cities}
+
+ggplot(bnb.data, aes(x = city, y = log_price)) +
+  geom_boxplot()
+
+# ggplot(bnb.data, aes(x = city, y = price)) +
+#   geom_boxplot()
+  
+```
+
+
+# B. Price with amenity?
+
+Does AC matter? Does shampoo matter?
+
+```{r amme}
+shampoo.data <- bnb.data %>%
+  select(log_price, starts_with("am_"))
+
+par(mfrow = c(2, 5))
+for (i in 2:11){
+  plot(shampoo.data[,1] ~ as.factor(shampoo.data[,i]),
+        xlab = colnames(shampoo.data)[i], ylab = colnames(shampoo.data)[1])
+}
+
+
+
 
 ```

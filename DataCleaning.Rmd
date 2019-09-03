@@ -47,10 +47,16 @@ bnb.data <- bnb.raw %>% # date
          am_Shampoo = str_detect(amenities, "Shampoo"),
          am_Essentials = str_detect(amenities, "Essentials"))
 
+# deal with '%'
 bnb.data <- bnb.data %>%
   mutate(host_response_rate = as.character(host_response_rate),
          host_response_rate = str_sub(host_response_rate,1L,-2L), #remove "%"
          host_response_rate = as.numeric(host_response_rate)*0.01) # trans to digit
+
+# add has_review for those has review
+bnb.data <- bnb.data %>%
+  mutate(has_review = ifelse(number_of_reviews==0,0,1),
+         has_review = as.factor(has_review))
 
 save(bnb.data, file = "bnb_data.Rdata")
 ```
