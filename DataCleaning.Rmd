@@ -14,6 +14,16 @@ library(zoo)
 library(lubridate)
 library(ggplot2)
 library(stringr)
+
+# packages for word cloud
+# install.packages("tm")  # for text mining
+# install.packages("SnowballC") # for text stemming
+# install.packages("wordcloud") # word-cloud generator 
+# install.packages("RColorBrewer") # color palettes
+library("tm")
+library("SnowballC")
+library("wordcloud")
+library("RColorBrewer")
 ```
 
 # processing data and save to "bnb_data.Rdata"
@@ -50,7 +60,11 @@ bnb.data <- bnb.data %>%
          am_Dryer = str_detect(amenities, "Dryer"),
          am_Parking = str_detect(amenities, "Free parking on premises"),
          am_Shampoo = str_detect(amenities, "Shampoo"),
-         am_Essentials = str_detect(amenities, "Essentials"))
+         am_Smoke = str_detect(amenities, "Smoke Detector"),
+         am_Hangers = str_detect(amenities, "Hangers"),
+         am_Iron = str_detect(amenities, "Iron"),
+         am_Fire = str_detect(amenities, "Fire Extinguisher"),
+         am_Firstaid = str_detect(amenities, "First Aid Kit"))
 
 # deal with '%'
 bnb.data <- bnb.data %>%
@@ -66,6 +80,37 @@ bnb.data <- bnb.data %>%
 save(bnb.data, file = "bnb_data.Rdata")
 ```
 
+```{r amme}
+# http://www.sthda.com/english/wiki/text-mining-and-word-cloud-fundamentals-in-r-5-simple-steps-you-should-know 
+
+# find Top10 listed amenities
+ame <- str_c(bnb.data$amenities, sep = "", collapse = "") %>%
+       str_to_title() %>%
+       str_replace_all(" ", "") %>%
+       str_replace_all("\\{", "") %>%
+       str_replace_all("\\}", "") %>%
+       str_replace_all(",", " ")
+# Load the data as a corpus
+docs <- Corpus(VectorSource(ame))
+
+# text transformation
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+docs <- tm_map(docs, toSpace, "\"")
+
+
+# Build a term-document matrix
+dtm <- TermDocumentMatrix(docs)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+
+# Word cloud
+set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+```
 
 ```{r summ}
 
