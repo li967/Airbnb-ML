@@ -2,13 +2,124 @@
 title: "KNN"
 author: "Yuxuan Li"
 date: "9/3/2019"
-output: html_document
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+    math: katex
 ---
 
 ```{r setup, include=FALSE}
+# https://daviddalpiaz.github.io/r4sl/knn-reg.html#knn-in-r 
+
 rm(list= ls())
 knitr::opts_chunk$set(echo = TRUE)
 
+# install.packages("FNN")
+library(FNN)
+library(MASS)
+library(dplyr)
+
 load("bnb_data.Rdata")
-load("bnb_data.Rdata")
+
+```
+
+
+Fisrt, consider only geographical information. 
+
+```{r fool knn}
+
+X_trn <- dplyr::select(train.data, latitude, longitude, neighbourhood) %>%
+  mutate(neighbourhood = as.factor(neighbourhood))
+X_tst <- dplyr::select(test.data, latitude, longitude, neighbourhood)%>%
+  mutate(neighbourhood = as.factor(neighbourhood))
+y_trn <- dplyr::select(train.data, log_price)
+y_tst <- dplyr::select(test.data, log_price)
+
+pred_001 = knn.reg(train = X_trn, test = X_tst, y = y_trn, k = 1)
+pred_005 = knn.reg(train = X_trn, test = X_tst, y = y_trn, k = 5)
+pred_010 = knn.reg(train = X_trn, test = X_tst, y = y_trn, k = 10)
+pred_050 = knn.reg(train = X_trn, test = X_tst, y = y_trn, k = 50)
+pred_100 = knn.reg(train = X_trn, test = X_tst, y = y_trn, k = 100)
+pred_250 = knn.reg(train = X_trn, test = X_tst, y = y_trn, k = 250)
+
+par(mfrow = c(2,3))
+plot(y_tst[,1], pred_001$pred, col = "orange")
+plot(y_tst[,1], pred_005$pred, col = "orange")
+plot(y_tst[,1], pred_010$pred, col = "orange")
+plot(y_tst[,1], pred_050$pred, col = "orange")
+plot(y_tst[,1], pred_100$pred, col = "orange")
+plot(y_tst[,1], pred_250$pred, col = "orange")
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r test, include=FALSE}
+data(Boston)
+set.seed(42)
+boston_idx = sample(1:nrow(Boston), size = 250)
+trn_boston = Boston[boston_idx, ]
+tst_boston  = Boston[-boston_idx, ]
+X_trn_boston = trn_boston["lstat"]
+X_tst_boston = tst_boston["lstat"]
+y_trn_boston = trn_boston["medv"]
+y_tst_boston = tst_boston["medv"]
+
+# We create an additional “test” set lstat_grid, that is a grid of lstat values at which we will predict medv in order to create graphics.
+
+X_trn_boston_min = min(X_trn_boston)
+X_trn_boston_max = max(X_trn_boston)
+lstat_grid = data.frame(lstat = seq(X_trn_boston_min, X_trn_boston_max, 
+                                    by = 0.01))
+
+pred_001 = knn.reg(train = X_trn_boston, test = lstat_grid, y = y_trn_boston, k = 1)
+pred_005 = knn.reg(train = X_trn_boston, test = lstat_grid, y = y_trn_boston, k = 5)
+pred_010 = knn.reg(train = X_trn_boston, test = lstat_grid, y = y_trn_boston, k = 10)
+pred_050 = knn.reg(train = X_trn_boston, test = lstat_grid, y = y_trn_boston, k = 50)
+pred_100 = knn.reg(train = X_trn_boston, test = lstat_grid, y = y_trn_boston, k = 100)
+pred_250 = knn.reg(train = X_trn_boston, test = lstat_grid, y = y_trn_boston, k = 250)
+
+par(mfrow = c(2,3))
+plot(lstat_grid[,1],pred_001$pred,type = "l", col = "orange")
+par(new=TRUE)
+plot(X_tst_boston[,1],y_tst_boston[,1], col = "lightblue")
+plot(lstat_grid[,1],pred_005$pred,type = "l", col = "orange")
+par(new=TRUE)
+plot(X_tst_boston[,1],y_tst_boston[,1], col = "lightblue")
+plot(lstat_grid[,1],pred_010$pred,type = "l", col = "orange")
+par(new=TRUE)
+plot(X_tst_boston[,1],y_tst_boston[,1], col = "lightblue")
+plot(lstat_grid[,1],pred_050$pred,type = "l", col = "orange")
+par(new=TRUE)
+plot(X_tst_boston[,1],y_tst_boston[,1], col = "lightblue")
+plot(lstat_grid[,1],pred_100$pred,type = "l", col = "orange")
+par(new=TRUE)
+plot(X_tst_boston[,1],y_tst_boston[,1], col = "lightblue")
+plot(lstat_grid[,1],pred_250$pred,type = "l", col = "orange")
+par(new=TRUE)
+plot(X_tst_boston[,1],y_tst_boston[,1], col = "lightblue")
+
 ```
