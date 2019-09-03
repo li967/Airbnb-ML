@@ -25,16 +25,34 @@ load("bnb_data.Rdata")
 ```
 
 
-Fisrt, consider only geographical information. 
+# 0. SILU
+Since KNN-regression uses Euclidean distance to define the neighbor, only quantitative varaibles can be used. I will add in all available predicters in three layers (or steps, groups, or whatever). 
+
+- 1st Group: Geographical
+  + lag
+  + long
+- 2nd Group: Amenity
+  + beds
+  + bedrooms
+  + bathrooms
+  + accommodation
+  + num_of_amenities
+- 3rd Group: Rate
+  + rate
+  + number_of_review
+  + host_response_rate
+
+Within each group, I will do cross-validation to determine the best k (the k-NN k). The K's I'm considering is a list of 1 to 840, which is the number of properties in Boston in training data. 
 
 ```{r fool knn}
-
-X_trn <- dplyr::select(train.data, latitude, longitude, neighbourhood) %>%
-  mutate(neighbourhood = as.factor(neighbourhood))
-X_tst <- dplyr::select(test.data, latitude, longitude, neighbourhood)%>%
-  mutate(neighbourhood = as.factor(neighbourhood))
 y_trn <- dplyr::select(train.data, log_price)
 y_tst <- dplyr::select(test.data, log_price)
+
+X1_trn <- dplyr::select(train.data, latitude, longitude, neighbourhood) %>%
+  mutate(neighbourhood = as.factor(neighbourhood))
+X1_tst <- dplyr::select(test.data, latitude, longitude, neighbourhood)%>%
+  mutate(neighbourhood = as.factor(neighbourhood))
+
 
 pred_001 = knn.reg(train = X_trn, test = X_tst, y = y_trn, k = 1)
 pred_005 = knn.reg(train = X_trn, test = X_tst, y = y_trn, k = 5)

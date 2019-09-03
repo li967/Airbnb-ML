@@ -35,7 +35,7 @@ bnb.raw <- read.csv("airbnb_data.csv") %>%
 * ammenity
 * zipcode (add 0 to beginning)
 * host_response_rate: percentage to digits
-* quantitative vars:
+* qualitative vars:
   + room_type (Entire house/apt) -> is_Entire
   + room_type (Entire/Private) -> is_Private
   + bed_type -> is_RealBed 
@@ -82,7 +82,7 @@ bnb.data <- bnb.data %>%
   mutate(has_review = ifelse(number_of_reviews==0,0,1),
          has_review = as.factor(has_review))
 
-# Deal with quantitative data
+# Deal with qualitative data
 bnb.data <- bnb.data %>%
   mutate(is_Entire = ifelse(room_type == "Entire home/apt", 1,0),
          is_Private = ifelse(room_type != "Shared room", 1,0),
@@ -95,7 +95,8 @@ bnb.data <- bnb.data %>%
          instant_bookable = ifelse(instant_bookable=="t",1,0))
 
 
-
+# remove outlier (the one with log-price == 0)
+bnb.data <- filter(bnb.data, log_price != 0)
 
 # split training and testing
 set.seed(1)
