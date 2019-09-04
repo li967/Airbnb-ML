@@ -26,13 +26,13 @@ library("wordcloud")
 library("RColorBrewer")
 
 # read airbnb.data from csv file
-bnb.raw <- read.csv("airbnb_data.csv") %>%
-  mutate(price = exp(log_price))
+bnb.raw <- read.csv("airbnb_data.csv") 
 ```
 
 # processing data and save to "bnb_data.Rdata"
 * date (as data, date length between host_since and first review)
-* ammenity
+* ammenity (described later(maybe))
+* NA's (described later)
 * zipcode (add 0 to beginning)
 * host_response_rate: percentage to digits
 * qualitative vars:
@@ -40,6 +40,27 @@ bnb.raw <- read.csv("airbnb_data.csv") %>%
   + room_type (Entire/Private) -> is_Private
   + bed_type -> is_RealBed 
   + Cancellation policy (if somewhat strict) -> is_CancelStrict
+  
+## NA's 
+8333 obs have NA's. In the dataset, 2 types of NA's are observed: random and systematical.
+* Random NA's are rare, randomly happened, including
+  + bathrooms 95
+  + bedrooms 41
+  + beds 59
+  + host_has_profile_pic 91
+  + host_identity_verified 91
+  + host_since 91
+  
+* Systematical NA's are typically because of no review, including:
+  + first_review: 7717
+  + last_review: 7696
+  + review_scores_rating: 8143
+
+We simply dropped random NA's. For systimetical one's, we assign sample mean to review_scores_rating, and sample max to post_wait, which is the day-difference between host_since and first_review. Then remove first_review and last_review. 
+  
+## amenities
+
+Hosts list their amenities. 
 
 ```{r readdata}
 # deal with date and zipcode
@@ -50,6 +71,18 @@ bnb.data <- bnb.raw %>% # date
   mutate(post_wait = time_length(host_since %--% first_review, unit = "day")) %>%
   mutate(zipcode = as.character(zipcode)) %>% # zipcode
   mutate(zipcode = str_pad(zipcode,5,side="left",pad="0"))
+
+# Deal with NA's
+  # systematical
+  score_mean <- mean(na.omit(bnb.data$review_scores_rating))
+  wait_max <- max(na.omit(bnb.data$post_wait))
+  bnb.data <- bnb.data %>%
+    mutate(review_scores_rating = ifelse(is.na(review_scores_rating)==TRUE,score_mean,
+                                         review_scores_rating),
+           post_wait = ifelse(is.na(post_wait)==TRUE,wait_max,post_wait)) %>%
+    dplyr::select(-first_review, -last_review)
+  # ramdom
+  bnb.data <- na.omit(bnb.data)
 
 # deal with amenities
 bnb.data <- bnb.data %>%
@@ -98,11 +131,12 @@ bnb.data <- bnb.data %>%
 # remove outlier (the one with log-price == 0)
 bnb.data <- filter(bnb.data, log_price != 0)
 
+
 # split training and testing
 set.seed(1)
-train <- sample(nrow(bnb.data), 0.5*nrow(bnb.data))
+train <- sample(nrow(bnb.data), 0.75*nrow(bnb.data))
 train.data <- bnb.data[train,]
-test.data <- bnb.data[-train,]
+test.data <- bnb.data[-train,] 
 
 save(bnb.data,train.data,test.data, file = "bnb_data.Rdata")
 
