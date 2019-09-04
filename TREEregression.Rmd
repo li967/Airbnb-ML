@@ -35,12 +35,12 @@ load("bnb_data.Rdata")
   test.quant <- filter(quant, X %in% test.data$X) %>% dplyr::select(-X)
   
   # whole 
-  train.whole <- dplyr::select(train.data, -price, -amenities, 
-                               -last_review, -first_review, -host_since,
+  train.whole <- dplyr::select(train.data, -amenities, 
+                               -host_since,
                                -is_Private,-is_Entire,
                                -neighbourhood, -zipcode, -X) %>% na.omit()
-  test.whole <- dplyr::select(test.data, -price, -amenities, 
-                              -last_review, -first_review, -host_since,
+  test.whole <- dplyr::select(test.data, -amenities, 
+                              -host_since,
                               -is_Private,-is_Entire,
                               -neighbourhood, -zipcode, -X) %>%  na.omit()
   
