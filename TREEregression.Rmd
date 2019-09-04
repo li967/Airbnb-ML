@@ -18,51 +18,56 @@ library(randomForest)
 
 load("bnb_data.Rdata")
 
+# define function
+  rmse = function(actual, predicted) {
+    sqrt(mean((actual - predicted) ^ 2))
+  }
+
 # data process
-
-quant <- dplyr::select(bnb.data, X, log_price, latitude, longitude, 
-                        accommodates, beds, bedrooms, bathrooms, number_of_amenities,
-                        review_scores_rating, number_of_reviews, host_response_rate) %>%
-  na.omit()
-
-train.quant <- filter(quant, X %in% train.data$X) %>% dplyr::select(-X)
-test.quant <- filter(quant, X %in% test.data$X) %>% dplyr::select(-X)
+  
+  # quant
+  quant <- dplyr::select(bnb.data, X, log_price, latitude, longitude, 
+                          accommodates, beds, bedrooms, bathrooms, number_of_amenities,
+                          review_scores_rating, number_of_reviews, host_response_rate) %>%
+    na.omit()
+  
+  train.quant <- filter(quant, X %in% train.data$X) %>% dplyr::select(-X)
+  test.quant <- filter(quant, X %in% test.data$X) %>% dplyr::select(-X)
+  
+  # whole 
+  train.whole <- dplyr::select(train.data, -price, -amenities, 
+                               -last_review, -first_review, -host_since,
+                               -is_Private,-is_Entire,
+                               -neighbourhood, -zipcode, -X) %>% na.omit()
+  test.whole <- dplyr::select(test.data, -price, -amenities, 
+                              -last_review, -first_review, -host_since,
+                              -is_Private,-is_Entire,
+                              -neighbourhood, -zipcode, -X) %>%  na.omit()
+  
 
 ```
 
 
-```{r random}
+```{r random quant}
 
-### Random Forests: Just change mtry argument!
-# Default options in randomForest(): for regression tree p/3, for classification tree sqrt(p)
+### Random Forests: 
 set.seed(1)
+
 # Build random forest with mtry = 6
 rf.bnb <- randomForest(log_price~., data = train.quant, mtry = 6, importance = TRUE)
-# use importance = T to see the importance of each variable 
 yhat.rf <- predict(rf.bnb,newdata=test.quant)
 mean((yhat.rf-test.quant$log_price)^2)   # Test MSE
 sqrt(mean((yhat.rf-test.quant$log_price)^2))   # sqrt test MSE
 
-# Do you see any improvement over single reg. tree and bagging? 
-# What might be the reason?
-# Why are trees correlated? becuase our bootstrapping sample contains overlapping obs, sort of correlated. 
-
 importance(rf.bnb)
 varImpPlot(rf.bnb)
-# What are the two importance measures?
-# left--accuracy, right -- purity
-# How to interpret these plots?
-
 
 ```
 
 
-```{r random whole}
-train.whole <- dplyr::select(train.data, -price, -amenities, -last_review, -first_review, -host_since, -property_type, -bed_type, -neighbourhood, -zipcode, -X) %>%
-  na.omit()
-test.whole <- dplyr::select(test.data, -price, -amenities, -last_review, -first_review, -host_since,-property_type, -bed_type,-neighbourhood, -zipcode, -X) %>%
-  na.omit()
 
+
+```{r random whole}
 ### Random Forests: Just change mtry argument!
 # Default options in randomForest(): for regression tree p/3, for classification tree sqrt(p)
 set.seed(1)
@@ -83,7 +88,79 @@ varImpPlot(rf.bnb)
 # left--accuracy, right -- purity
 # How to interpret these plots?
 
+```
 
 
+```{r cv tree}
+train.whole <- select(train.whole, -property_type)
+test.whole  <- select(test.whole,  -property_type)
+# do an innitial tree
+bnb_tree = tree(log_price ~ ., data = train.whole)
+summary(bnb_tree)
 
+# plot it
+plot(bnb_tree)
+text(bnb_tree, pretty = 0)
+title(main = "Unpruned Regression Tree")
+
+# using cv to prune
+set.seed(1)
+bnb_tree_cv = cv.tree(bnb_tree)
+plot(bnb_tree_cv$size, sqrt(bnb_tree_cv$dev / nrow(train.whole)), type = "b",
+     xlab = "Tree Size", ylab = "CV-RMSE")
+
+# apply best = 8
+bnb_tree_prune = prune.tree(bnb_tree, best = 6)
+summary(bnb_tree_prune)
+
+# plot it
+par(mfrow = c(1,2))
+plot(bnb_tree)
+text(bnb_tree, pretty = 0)
+title(main = "Unpruned Regression Tree")
+plot(bnb_tree_prune)
+text(bnb_tree_prune, pretty = 0)
+title(main = "Pruned Regression Tree")
+
+## Evaluation
+# training RMSE
+bnb_prune_trn_pred = predict(bnb_tree_prune, newdata = train.whole)
+rmse(bnb_prune_trn_pred, train.whole$log_price)
+# test RMSE
+bnb_prune_tst_pred = predict(bnb_tree_prune, newdata = test.whole)
+rmse(bnb_prune_tst_pred, test.whole$log_price)
+
+plot(bnb_prune_tst_pred, test.whole$log_price, xlab = "Predicted", ylab = "Actual")
+abline(0, 1)
+```
+
+```{r rpart tree}
+# https://daviddalpiaz.github.io/r4sl/trees.html#regression-trees
+
+library(rpart)
+set.seed(1)
+# Fit a decision tree using rpart
+# Note: when you fit a tree using rpart, the fitting routine automatically
+# performs 10-fold CV and stores the errors for later use 
+# (such as for pruning the tree)
+
+# fit a tree using rpart
+bnb_rpart = rpart(log_price ~ ., data = train.whole)
+
+# plot the cv error curve for the tree
+# rpart tries different cost-complexities by default
+# also stores cv results
+plotcp(bnb_rpart)
+
+# find best value of cp
+min_cp = bnb_rpart$cptable[which.min(bnb_rpart$cptable[,"xerror"]),"CP"]
+min_cp
+
+# prunce tree using best cp
+bnb_rpart_prune = prune(bnb_rpart, cp = min_cp)
+
+# nicer plots
+library(rpart.plot)
+prp(bnb_rpart_prune)
+rpart.plot(bnb_rpart_prune)
 ```
