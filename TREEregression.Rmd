@@ -145,7 +145,7 @@ set.seed(1)
 # (such as for pruning the tree)
 
 # fit a tree using rpart
-bnb_rpart = rpart(log_price ~ ., data = train.whole)
+bnb_rpart = rpart(log_price ~ ., data = train.whole, control = c(maxdepth = 30L))
 
 # plot the cv error curve for the tree
 # rpart tries different cost-complexities by default

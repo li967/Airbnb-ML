@@ -72,13 +72,22 @@ bnb.data <- bnb.raw %>% # date
   mutate(zipcode = as.character(zipcode)) %>% # zipcode
   mutate(zipcode = str_pad(zipcode,5,side="left",pad="0"))
 
+# deal with '%'
+bnb.data <- bnb.data %>%
+  mutate(host_response_rate = as.character(host_response_rate),
+         host_response_rate = str_sub(host_response_rate,1L,-2L), #remove "%"
+         host_response_rate = as.numeric(host_response_rate)*0.01) # trans to digit
+
 # Deal with NA's
   # systematical
   score_mean <- mean(na.omit(bnb.data$review_scores_rating))
+  response_mean <- mean(na.omit(bnb.data$host_response_rate))
   wait_max <- max(na.omit(bnb.data$post_wait))
   bnb.data <- bnb.data %>%
     mutate(review_scores_rating = ifelse(is.na(review_scores_rating)==TRUE,score_mean,
                                          review_scores_rating),
+           host_response_rate = ifelse(is.na(host_response_rate)==TRUE, response_mean,
+                                       host_response_rate),
            post_wait = ifelse(is.na(post_wait)==TRUE,wait_max,post_wait)) %>%
     dplyr::select(-first_review, -last_review)
   # ramdom
@@ -103,12 +112,6 @@ bnb.data <- bnb.data %>%
          am_Iron = str_detect(amenities, "Iron"),
          am_Fire = str_detect(amenities, "Fire extinguisher"),
          am_Firstaid = str_detect(amenities, "First aid kit"))
-
-# deal with '%'
-bnb.data <- bnb.data %>%
-  mutate(host_response_rate = as.character(host_response_rate),
-         host_response_rate = str_sub(host_response_rate,1L,-2L), #remove "%"
-         host_response_rate = as.numeric(host_response_rate)*0.01) # trans to digit
 
 # add has_review for those has review
 bnb.data <- bnb.data %>%
