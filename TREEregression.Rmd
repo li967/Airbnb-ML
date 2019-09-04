@@ -1,0 +1,89 @@
+---
+title: "TREEregression"
+author: "Yuxuan Li"
+date: "9/3/2019"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+    math: katex
+---
+
+```{r setup}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(randomForest)
+
+load("bnb_data.Rdata")
+
+# data process
+
+quant <- dplyr::select(bnb.data, X, log_price, latitude, longitude, 
+                        accommodates, beds, bedrooms, bathrooms, number_of_amenities,
+                        review_scores_rating, number_of_reviews, host_response_rate) %>%
+  na.omit()
+
+train.quant <- filter(quant, X %in% train.data$X) %>% dplyr::select(-X)
+test.quant <- filter(quant, X %in% test.data$X) %>% dplyr::select(-X)
+
+```
+
+
+```{r random}
+
+### Random Forests: Just change mtry argument!
+# Default options in randomForest(): for regression tree p/3, for classification tree sqrt(p)
+set.seed(1)
+# Build random forest with mtry = 6
+rf.bnb <- randomForest(log_price~., data = train.quant, mtry = 6, importance = TRUE)
+# use importance = T to see the importance of each variable 
+yhat.rf <- predict(rf.bnb,newdata=test.quant)
+mean((yhat.rf-test.quant$log_price)^2)   # Test MSE
+sqrt(mean((yhat.rf-test.quant$log_price)^2))   # sqrt test MSE
+
+# Do you see any improvement over single reg. tree and bagging? 
+# What might be the reason?
+# Why are trees correlated? becuase our bootstrapping sample contains overlapping obs, sort of correlated. 
+
+importance(rf.bnb)
+varImpPlot(rf.bnb)
+# What are the two importance measures?
+# left--accuracy, right -- purity
+# How to interpret these plots?
+
+
+```
+
+
+```{r random whole}
+train.whole <- dplyr::select(train.data, -price, -amenities, -last_review, -first_review, -host_since, -property_type, -bed_type, -neighbourhood, -zipcode, -X) %>%
+  na.omit()
+test.whole <- dplyr::select(test.data, -price, -amenities, -last_review, -first_review, -host_since,-property_type, -bed_type,-neighbourhood, -zipcode, -X) %>%
+  na.omit()
+
+### Random Forests: Just change mtry argument!
+# Default options in randomForest(): for regression tree p/3, for classification tree sqrt(p)
+set.seed(1)
+# Build random forest with mtry = 6
+rf.bnb <- randomForest(log_price~., data = train.whole, mtry = 6, importance = TRUE)
+# use importance = T to see the importance of each variable 
+yhat.rf <- predict(rf.bnb,newdata=test.whole)
+mean((yhat.rf-test.whole$log_price)^2)   # Test MSE
+sqrt(mean((yhat.rf-test.whole$log_price)^2))   # sqrt test MSE
+
+# Do you see any improvement over single reg. tree and bagging? 
+# What might be the reason?
+# Why are trees correlated? becuase our bootstrapping sample contains overlapping obs, sort of correlated. 
+
+importance(rf.bnb)
+varImpPlot(rf.bnb)
+# What are the two importance measures?
+# left--accuracy, right -- purity
+# How to interpret these plots?
+
+
+
+
+```

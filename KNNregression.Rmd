@@ -53,8 +53,8 @@ rmse = function(actual, predicted) {
 
 # define helper function for getting knn.reg predictions
 make_knn_pred = function(k = 1, training, predicting, y = y_trn) {
-  pred = FNN::knn.reg(train = training, 
-                      test  = predicting, 
+  pred = FNN::knn.reg(train = scale(training), 
+                      test  = scale(predicting), 
                       y = y, 
                       k = k)$pred
   act  = y[,1]
@@ -62,7 +62,7 @@ make_knn_pred = function(k = 1, training, predicting, y = y_trn) {
 }
 
 # define values of k to evaluate
-k = c(1, 5, 10, 25, 50, 250, 500, 840)
+k = c(1, 5, 10, 25, 50, 250, 500, 840,1000,3000)
 
 # Drop NA's. (refer to all the predictors (Group3) we need)
 whole <- dplyr::select(bnb.data, X, log_price, latitude, longitude, 
@@ -233,7 +233,7 @@ X_tst_boston = tst_boston["lstat"]
 y_trn_boston = trn_boston["medv"]
 y_tst_boston = tst_boston["medv"]
 
-# We create an additional “test” set lstat_grid, that is a grid of lstat values at which we will predict medv in order to create graphics.
+# We create an additional “test�? set lstat_grid, that is a grid of lstat values at which we will predict medv in order to create graphics.
 
 X_trn_boston_min = min(X_trn_boston)
 X_trn_boston_max = max(X_trn_boston)
