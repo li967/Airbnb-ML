@@ -23,8 +23,14 @@ library(ggplot2)
 
 ```{r summary}
 summary(bnb.data)
+bnb.data <- mutate(bnb.data,price = exp(log_price))
 
-num.data <- bnb.data
+quant.data <- bnb.data %>%
+  select(log_price, accommodates, beds, bedrooms, bathrooms, number_of_amenities,
+         review_scores_rating, number_of_reviews, host_response_rate, post_wait)
+
+pairs(quant.data)
+summary(quant.data)
 ```
 
 # 1.Number of amenity
@@ -63,7 +69,8 @@ for (i in 3:6){
                   fill = has_review) + 
     geom_violin(scale = "width") +
     xlab(colnames(amen.data)[i]) +
-    ylab(colnames(amen.data)[2])
+    ylab(colnames(amen.data)[2]) +
+    theme_minimal()
   
   print(p)
 }
@@ -82,7 +89,8 @@ for (i in 3:6){
     geom_violin(scale = "width") +
     geom_smooth(aes(x = amen.data[,i], y = amen.data[,1]),method = "lm") +
     xlab(colnames(amen.data)[i]) +
-    ylab(colnames(amen.data)[1])
+    ylab(colnames(amen.data)[1]) +
+    theme_minimal()
   
   print(p)
 }
@@ -102,23 +110,31 @@ Note: if No first_review
 hore.data <- bnb.data %>%
   select(price, log_price, 
          host_response_rate, number_of_reviews, review_scores_rating,
-         host_has_profile_pic, host_identity_verified) %>%
-  mutate(review_scores_rating)
-summary(hore.data)
+         post_wait, host_has_profile_pic, host_identity_verified) %>%
+  mutate(host_has_profile_pic = as.factor(host_has_profile_pic),
+         host_identity_verified = as.factor(host_identity_verified)) %>%
+  filter(post_wait >0 & post_wait < max(post_wait))
+# summary(hore.data)
 
 
 # log price to host and reviews
 par(mfrow = c(2, 3))
-for (i in 3:7){
+for (i in 3:8){
   plot(hore.data[,2] ~ hore.data[,i],
         xlab = colnames(hore.data)[i], ylab = colnames(hore.data)[2])
 }
 
 # price to host and reviews
 par(mfrow = c(2, 3))
-for (i in 3:7){
+for (i in 3:8){
   plot(hore.data[,1] ~ hore.data[,i],
         xlab = colnames(hore.data)[i], ylab = colnames(hore.data)[1])
+}
+
+par(mfrow = c(2,3))
+for (i in 3:5){
+  plot(hore.data[,i] ~ hore.data[,i+1],
+       xlab = colnames(hore.data)[i+1], ylab = colnames(hore.data)[i])
 }
 
 ```
@@ -144,7 +160,8 @@ for (i in 3:6){
                     fill = has_review),
                 scale = "width") +
     xlab(colnames(amen.data)[i]) +
-    ylab(colnames(amen.data)[2])
+    ylab(colnames(amen.data)[2]) +
+    theme_minimal()
   
   print(p)
 }
@@ -156,7 +173,8 @@ for (i in 3:6){
     geom_smooth(method = lm) +
     geom_jitter() +
     xlab(colnames(amen.data)[i]) +
-    ylab(colnames(amen.data)[2])
+    ylab(colnames(amen.data)[2]) +
+    theme_minimal()
   
   print(p)
 }
@@ -172,7 +190,8 @@ for (i in 3:6){
     geom_smooth(method = lm) +
     geom_jitter() +
     xlab(colnames(zero.data)[i]) +
-    ylab(colnames(zero.data)[2])
+    ylab(colnames(zero.data)[2]) +
+    theme_minimal()
   
   print(p)
 }
@@ -194,7 +213,8 @@ ggplot(amen.data,aes(x = as.factor(amen.data[,i]), y = amen.data[,1])) +
     geom_violin(scale = "width") +
     geom_smooth(aes(x = amen.data[,i], y = amen.data[,1]),method = "lm") +
     xlab(colnames(amen.data)[i]) +
-    ylab(colnames(amen.data)[1])
+    ylab(colnames(amen.data)[1]) +
+    theme_minimal()
 
 per.data <- bnb.data %>%
   select(price, bedrooms, review_scores_rating) %>%
@@ -209,10 +229,12 @@ hist(per.data$log_price_per_bdrm)
 
 # do the graph
 ggplot(per.data,aes(x = review_scores_rating, y = log_price_per_bdrm)) + 
-  geom_point()
+  geom_point() +
+    theme_minimal()
 
 ggplot(per.data,aes(x = review_scores_rating, y = price_per_bdrm)) + 
-  geom_point()
+  geom_point() +
+    theme_minimal()
 
 
 
@@ -230,8 +252,11 @@ First see general (log-)price distributions across cities. The difference is not
 ```{r cities}
 
 ggplot(bnb.data, aes(x = city, y = log_price)) +
-  geom_boxplot()
-
+  geom_boxplot() +
+    theme_minimal()
+ggplot(bnb.data, aes(x = city, y = log_price)) +
+  geom_violin() +
+    theme_minimal()
 # ggplot(bnb.data, aes(x = city, y = price)) +
 #   geom_boxplot()
   
@@ -271,7 +296,8 @@ plot(bnb.data$number_of_amenities, bnb.data$log_price)
 
 ggplot(bnb.data, aes(x = number_of_amenities, y = log_price)) +
   geom_point(aes(color = review_scores_rating),alpha=I(1/5))  + 
-  scale_y_continuous(limits = c(2,8))
+  scale_y_continuous(limits = c(2,8)) +
+    theme_minimal()
 
 
 
