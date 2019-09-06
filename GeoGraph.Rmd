@@ -49,11 +49,13 @@ ggplot(bnb.ca,aes(longitude,latitude)) +
 ```{r NYmap}
 
 # prepare data, long and lat
-NY.data <- filter(bnb.data, city == "NYC")
+NY.data <- filter(bnb.data, city == "NYC") %>%
+  rename(lon = longitude, lat = latitude)
 l <- min(NY.data$longitude); r <- max(NY.data$longitude)
 b <- min(NY.data$latitude);  t <- max(NY.data$latitude)
 samp <- sample(nrow(NY.data), 0.05*nrow(NY.data))
-NY.small <- NY.data[samp,]
+NY.small <- NY.data[samp,] %>%
+  rename(lon = longitude, lat = latitude)
 
 # https://cosx.org/2013/01/drawing-map-in-r-era/
 
@@ -72,12 +74,14 @@ ggmap(NYmap) +
                         guide = "colourbar", aesthetics = "colour",
                         limits=c(0,2000),
                         breaks=c(50,100,200,1000,2000)) +
-  scale_size_continuous(limits = c(0,2000))#+ 
+  scale_size_continuous(limits = c(0,2000))+
+  stat_density2d(data = NY.small, aes(fill = price), geom = "polygon", alpha = 0.25)#+ 
     #geom_polygon(data = NY.small, 
     #             aes(x = longitude, y = latitude, group = neighbourhood), 
     #             colour = "black", fill = "grey", alpha = 0.2)
   
-
+ggmap(NYmap) +
+  stat_density2d(data = NY.small, aes(fill = price), geom = "polygon", alpha = 0.25)
 ```
 
 ```{r city map}

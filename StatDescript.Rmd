@@ -29,7 +29,7 @@ quant.data <- bnb.data %>%
   select(log_price, accommodates, beds, bedrooms, bathrooms, number_of_amenities,
          review_scores_rating, number_of_reviews, host_response_rate, post_wait)
 
-pairs(quant.data)
+#pairs(quant.data)
 summary(quant.data)
 ```
 
@@ -268,8 +268,22 @@ ggplot(bnb.data, aes(x = city, y = log_price)) +
 Does AC matter? Does shampoo matter?
 
 ```{r amen}
-shampoo.data <- bnb.data %>%
-  select(log_price, starts_with("am_"))
+library(stringr)
+bnb1.data <- bnb.data %>%
+  mutate(am_Essentials = str_detect(amenities, "Essentials"),
+         am_Carbon = str_detect(amenities, "Carbon monoxide detector"),
+         am_Laptop = str_detect(amenities, "Laptop friendly workspace"))
+
+shampoo.data <- bnb1.data %>%
+  select(log_price, starts_with("am_")) 
+
+shampoo.col <- colnames(shampoo.data) %>%
+  stringr::str_replace("am_","")
+
+colnames(shampoo.data) <- shampoo.col
+
+shampoo.data[shampoo.data==TRUE] <- "T"
+shampoo.data[shampoo.data==FALSE]<- "F"
 
 par(mfrow = c(2, 5))
 for (i in 2:11){
@@ -277,7 +291,11 @@ for (i in 2:11){
         xlab = colnames(shampoo.data)[i], ylab = colnames(shampoo.data)[1])
 }
 
-
+par(mfrow = c(2, 5))
+for (i in 12:18){
+  plot(shampoo.data[,1] ~ as.factor(shampoo.data[,i]),
+        xlab = colnames(shampoo.data)[i], ylab = colnames(shampoo.data)[1])
+}
 
 
 ```
@@ -299,8 +317,15 @@ ggplot(bnb.data, aes(x = number_of_amenities, y = log_price)) +
   scale_y_continuous(limits = c(2,8)) +
     theme_minimal()
 
+ggplot(bnb.data, aes(x = number_of_amenities, y = review_scores_rating)) +
+  geom_point(aes(color = log_price), alpha=I(1/5))  + 
+  scale_y_continuous() +
+    theme_minimal()
 
-
+ggplot(bnb.data, aes(x = post_wait, y = review_scores_rating)) +
+  geom_point(aes(color = log_price), alpha=I(1/5))  + 
+  scale_x_continuous(limits = c(0,max(bnb.data$post_wait))) +
+    theme_minimal()
 ```
 
 

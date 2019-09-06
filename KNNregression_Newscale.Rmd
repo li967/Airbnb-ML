@@ -53,8 +53,8 @@ rmse = function(actual, predicted) {
 
 # define helper function for getting knn.reg predictions
 make_knn_pred = function(k = 1, training, predicting, y = y_trn) {
-  pred = FNN::knn.reg(train = scale(training), 
-                      test  = scale(predicting), 
+  pred = FNN::knn.reg(train = training, 
+                      test  = predicting, 
                       y = y, 
                       k = k)$pred
   act  = y[,1]
@@ -120,9 +120,19 @@ y_tst <- dplyr::select(test.data, log_price)
 ```{r second group, warning=FALSE}
 # Second Group ----
   X2_trn <- dplyr::select(train.data, latitude, longitude, accommodates, 
-                          beds, bedrooms, bathrooms, number_of_amenities) 
+                          beds, bedrooms, bathrooms, number_of_amenities) %>%
+  mutate(accommodates = scale(accommodates),
+         beds = scale(beds),
+         bedrooms = scale(bedrooms),
+         bathrooms = scale(bathrooms),
+         number_of_amenities = scale(number_of_amenities))
   X2_tst <- dplyr::select(test.data, latitude, longitude, accommodates, 
-                          beds, bedrooms, bathrooms, number_of_amenities)
+                          beds, bedrooms, bathrooms, number_of_amenities)%>%
+  mutate(accommodates = scale(accommodates),
+         beds = scale(beds),
+         bedrooms = scale(bedrooms),
+         bathrooms = scale(bathrooms),
+         number_of_amenities = scale(number_of_amenities))
   
   # get requested train RMSEs
   knn_trn_rmse2 = sapply(k, make_knn_pred, 
@@ -160,10 +170,26 @@ y_tst <- dplyr::select(test.data, log_price)
 # Third Group ----
   X3_trn <- dplyr::select(train.data, latitude, longitude, accommodates, 
                           beds, bedrooms, bathrooms, number_of_amenities,
-                          review_scores_rating, number_of_reviews, host_response_rate) 
+                          review_scores_rating, number_of_reviews, host_response_rate) %>%
+  mutate(accommodates = scale(accommodates),
+         beds = scale(beds),
+         bedrooms = scale(bedrooms),
+         bathrooms = scale(bathrooms),
+         number_of_amenities = scale(number_of_amenities),
+         review_scores_rating = scale(review_scores_rating),
+         number_of_reviews = scale(number_of_reviews),
+         host_response_rate = scale(host_response_rate))
   X3_tst <- dplyr::select(test.data, latitude, longitude, accommodates, 
                           beds, bedrooms, bathrooms, number_of_amenities,
-                          review_scores_rating, number_of_reviews, host_response_rate)
+                          review_scores_rating, number_of_reviews, host_response_rate)%>%
+  mutate(accommodates = scale(accommodates),
+         beds = scale(beds),
+         bedrooms = scale(bedrooms),
+         bathrooms = scale(bathrooms),
+         number_of_amenities = scale(number_of_amenities),
+         review_scores_rating = scale(review_scores_rating),
+         number_of_reviews = scale(number_of_reviews),
+         host_response_rate = scale(host_response_rate))
   
   # get requested train RMSEs
   knn_trn_rmse3 = sapply(k, make_knn_pred, 

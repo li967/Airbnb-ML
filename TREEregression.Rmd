@@ -15,6 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(dplyr)
 library(randomForest)
+library(tree)
 
 load("bnb_data.Rdata")
 
@@ -67,7 +68,7 @@ varImpPlot(rf.bnb)
 
 
 
-```{r random whole}
+```{r random whole, eval=FALSE}
 ### Random Forests: Just change mtry argument!
 # Default options in randomForest(): for regression tree p/3, for classification tree sqrt(p)
 set.seed(1)

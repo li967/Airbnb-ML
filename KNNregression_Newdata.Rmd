@@ -20,7 +20,7 @@ library(FNN)
 library(MASS)
 library(dplyr)
 
-load("bnb_data.Rdata")
+load("bnb_city.Rdata")
 
 ```
 
