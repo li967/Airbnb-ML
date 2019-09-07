@@ -1,0 +1,298 @@
+---
+title: "KNN"
+author: "Yuxuan Li"
+date: "9/3/2019"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+    math: katex
+---
+
+```{r setup}
+# https://daviddalpiaz.github.io/r4sl/knn-reg.html#knn-in-r 
+
+rm(list= ls())
+knitr::opts_chunk$set(echo = TRUE)
+
+# install.packages("FNN")
+library(FNN)
+library(MASS)
+library(dplyr)
+
+load("bnb_data.Rdata")
+
+```
+
+
+# 0. SILU
+Since KNN-regression uses Euclidean distance to define the neighbor, only quantitative varaibles can be used. I will add in all available predicters in three layers (or steps, groups, or whatever). 
+
+- 1st Group: Geographical
+  + lag
+  + long
+- 2nd Group: Amenity
+  + beds
+  + bedrooms
+  + bathrooms
+  + accommodation
+  + num_of_amenities
+- 3rd Group: Rate
+  + rate
+  + number_of_review
+  + host_response_rate
+
+Within each group, I will do cross-validation to determine the best k (the k-NN k). The K's I'm considering is a list of 1 to 840, which is the number of properties in Boston in training data.
+
+```{r define func, warning=FALSE}
+
+# RMSE
+rmse = function(actual, predicted) {
+  sqrt(mean((actual - predicted) ^ 2))
+}
+
+# define helper function for getting knn.reg predictions
+make_knn_pred = function(k = 1, training, predicting, y = y_trn) {
+  pred = FNN::knn.reg(train = training, 
+                      test  = predicting, 
+                      y = y, 
+                      k = k)$pred
+  act  = y[,1]
+  rmse(predicted = pred, actual = act)
+}
+
+# define values of k to evaluate
+k = c(1, 5, 10, 25, 50, 250, 500, 840,1000,3000)
+
+# Drop NA's. (refer to all the predictors (Group3) we need)
+whole <- dplyr::select(bnb.data, X, log_price, latitude, longitude, 
+                        accommodates, beds, bedrooms, bathrooms, number_of_amenities,
+                        review_scores_rating, number_of_reviews, host_response_rate) %>%
+  na.omit()
+
+train.data <- filter(train.data, X %in% whole$X)
+test.data <- filter(test.data, X %in% whole$X)
+
+
+# responser
+y_trn <- dplyr::select(train.data, log_price)
+y_tst <- dplyr::select(test.data, log_price)
+
+```
+
+```{r first group, warning=FALSE}
+
+# Fisrt Group ----
+  X1_trn <- dplyr::select(train.data, latitude, longitude) 
+  X1_tst <- dplyr::select(test.data, latitude, longitude)
+  
+  # get requested train RMSEs
+  knn_trn_rmse1 = sapply(k, make_knn_pred, 
+                        training = X1_trn, 
+                        predicting = X1_trn)
+  
+  # get requested test RMSEs
+  knn_tst_rmse1 = sapply(k, make_knn_pred, 
+                        training = X1_trn, 
+                        predicting = X1_tst)
+  
+  # determine "best" k
+  best_k1 = k[which.min(knn_tst_rmse1)]
+  
+  # find overfitting, underfitting, and "best"" k
+  fit_status1 = ifelse(k < best_k1, "Over", ifelse(k == best_k1, "Best", "Under"))
+
+
+  # summarize results
+  knn_results1 = data.frame(
+    k,
+    round(knn_trn_rmse1, 2),
+    round(knn_tst_rmse1, 2),
+    fit_status1
+  )
+  
+  colnames(knn_results1) = c("k", "Train RMSE", "Test RMSE", "Fit?")
+  
+  # display results
+  knitr::kable(knn_results1, escape = FALSE, booktabs = TRUE)
+```
+
+```{r second group, warning=FALSE}
+# Second Group ----
+  X2_trn <- dplyr::select(train.data, latitude, longitude, accommodates, 
+                          beds, bedrooms, bathrooms, number_of_amenities) %>%
+  mutate(accommodates = scale(accommodates),
+         beds = scale(beds),
+         bedrooms = scale(bedrooms),
+         bathrooms = scale(bathrooms),
+         number_of_amenities = scale(number_of_amenities))
+  X2_tst <- dplyr::select(test.data, latitude, longitude, accommodates, 
+                          beds, bedrooms, bathrooms, number_of_amenities)%>%
+  mutate(accommodates = scale(accommodates),
+         beds = scale(beds),
+         bedrooms = scale(bedrooms),
+         bathrooms = scale(bathrooms),
+         number_of_amenities = scale(number_of_amenities))
+  
+  # get requested train RMSEs
+  knn_trn_rmse2 = sapply(k, make_knn_pred, 
+                        training = X2_trn, 
+                        predicting = X2_trn)
+  
+  # get requested test RMSEs
+  knn_tst_rmse2 = sapply(k, make_knn_pred, 
+                        training = X2_trn, 
+                        predicting = X2_tst)
+  
+  # determine "best" k
+  best_k2 = k[which.min(knn_tst_rmse2)]
+  
+  # find overfitting, underfitting, and "best"" k
+  fit_status2 = ifelse(k < best_k2, "Over", ifelse(k == best_k2, "Best", "Under"))
+
+
+  # summarize results
+  knn_results2 = data.frame(
+    k,
+    round(knn_trn_rmse2, 2),
+    round(knn_tst_rmse2, 2),
+    fit_status2
+  )
+  
+  colnames(knn_results2) = c("k", "Train RMSE", "Test RMSE", "Fit?")
+  
+  # display results
+  knitr::kable(knn_results2, escape = FALSE, booktabs = TRUE)
+```
+
+
+```{r third group, warning=FALSE}
+# Third Group ----
+  X3_trn <- dplyr::select(train.data, latitude, longitude, accommodates, 
+                          beds, bedrooms, bathrooms, number_of_amenities,
+                          review_scores_rating, number_of_reviews, host_response_rate) %>%
+  mutate(accommodates = scale(accommodates),
+         beds = scale(beds),
+         bedrooms = scale(bedrooms),
+         bathrooms = scale(bathrooms),
+         number_of_amenities = scale(number_of_amenities),
+         review_scores_rating = scale(review_scores_rating),
+         number_of_reviews = scale(number_of_reviews),
+         host_response_rate = scale(host_response_rate))
+  X3_tst <- dplyr::select(test.data, latitude, longitude, accommodates, 
+                          beds, bedrooms, bathrooms, number_of_amenities,
+                          review_scores_rating, number_of_reviews, host_response_rate)%>%
+  mutate(accommodates = scale(accommodates),
+         beds = scale(beds),
+         bedrooms = scale(bedrooms),
+         bathrooms = scale(bathrooms),
+         number_of_amenities = scale(number_of_amenities),
+         review_scores_rating = scale(review_scores_rating),
+         number_of_reviews = scale(number_of_reviews),
+         host_response_rate = scale(host_response_rate))
+  
+  # get requested train RMSEs
+  knn_trn_rmse3 = sapply(k, make_knn_pred, 
+                        training = X3_trn, 
+                        predicting = X3_trn)
+  
+  # get requested test RMSEs
+  knn_tst_rmse3 = sapply(k, make_knn_pred, 
+                        training = X3_trn, 
+                        predicting = X3_tst)
+  
+  # determine "best" k
+  best_k3 = k[which.min(knn_tst_rmse3)]
+  
+  # find overfitting, underfitting, and "best"" k
+  fit_status3 = ifelse(k < best_k3, "Over", ifelse(k == best_k3, "Best", "Under"))
+
+
+  # summarize results
+  knn_results3 = data.frame(
+    k,
+    round(knn_trn_rmse3, 2),
+    round(knn_tst_rmse3, 2),
+    fit_status3
+  )
+  
+  colnames(knn_results3) = c("k", "Train RMSE", "Test RMSE", "Fit?")
+  
+  # display results
+  knitr::kable(knn_results3, escape = FALSE, booktabs = TRUE)
+```
+
+```{r summary results, warning=FALSE}
+knitr::kable(knn_results1, escape = FALSE, booktabs = TRUE)
+knitr::kable(knn_results2, escape = FALSE, booktabs = TRUE)
+knitr::kable(knn_results3, escape = FALSE, booktabs = TRUE)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r test, eval=FALSE}
+data(Boston)
+set.seed(42)
+boston_idx = sample(1:nrow(Boston), size = 250)
+trn_boston = Boston[boston_idx, ]
+tst_boston  = Boston[-boston_idx, ]
+X_trn_boston = trn_boston["lstat"]
+X_tst_boston = tst_boston["lstat"]
+y_trn_boston = trn_boston["medv"]
+y_tst_boston = tst_boston["medv"]
+
+# We create an additional â€œtestâ€? set lstat_grid, that is a grid of lstat values at which we will predict medv in order to create graphics.
+
+X_trn_boston_min = min(X_trn_boston)
+X_trn_boston_max = max(X_trn_boston)
+lstat_grid = data.frame(lstat = seq(X_trn_boston_min, X_trn_boston_max, 
+                                    by = 0.01))
+
+pred_001 = knn.reg(train = X_trn_boston, test = lstat_grid, y = y_trn_boston, k = 1)
+pred_005 = knn.reg(train = X_trn_boston, test = lstat_grid, y = y_trn_boston, k = 5)
+pred_010 = knn.reg(train = X_trn_boston, test = lstat_grid, y = y_trn_boston, k = 10)
+pred_050 = knn.reg(train = X_trn_boston, test = lstat_grid, y = y_trn_boston, k = 50)
+pred_100 = knn.reg(train = X_trn_boston, test = lstat_grid, y = y_trn_boston, k = 100)
+pred_250 = knn.reg(train = X_trn_boston, test = lstat_grid, y = y_trn_boston, k = 250)
+
+par(mfrow = c(2,3))
+plot(lstat_grid[,1],pred_001$pred,type = "l", col = "orange")
+par(new=TRUE)
+plot(X_tst_boston[,1],y_tst_boston[,1], col = "lightblue")
+plot(lstat_grid[,1],pred_005$pred,type = "l", col = "orange")
+par(new=TRUE)
+plot(X_tst_boston[,1],y_tst_boston[,1], col = "lightblue")
+plot(lstat_grid[,1],pred_010$pred,type = "l", col = "orange")
+par(new=TRUE)
+plot(X_tst_boston[,1],y_tst_boston[,1], col = "lightblue")
+plot(lstat_grid[,1],pred_050$pred,type = "l", col = "orange")
+par(new=TRUE)
+plot(X_tst_boston[,1],y_tst_boston[,1], col = "lightblue")
+plot(lstat_grid[,1],pred_100$pred,type = "l", col = "orange")
+par(new=TRUE)
+plot(X_tst_boston[,1],y_tst_boston[,1], col = "lightblue")
+plot(lstat_grid[,1],pred_250$pred,type = "l", col = "orange")
+par(new=TRUE)
+plot(X_tst_boston[,1],y_tst_boston[,1], col = "lightblue")
+
+
+
+```

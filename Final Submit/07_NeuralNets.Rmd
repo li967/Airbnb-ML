@@ -1,0 +1,109 @@
+---
+title: "Neural Nets"
+author: "Zhirui Shi"
+date: "September 4, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(zoo)
+library(lubridate)
+library(ggplot2)
+library(stringr)
+
+library(ISLR)
+library(leaps)
+library(glmnet)
+
+```
+
+```{r input data}
+load("bnb_data.Rdata")
+```
+
+```{r nerual}
+
+## Scale data for neural network
+nn.data <- bnb.data
+
+nn.data <- select(nn.data, log_price, latitude, longitude, accommodates, bathrooms, host_has_profile_pic, host_identity_verified, host_response_rate,  number_of_reviews, review_scores_rating, bedrooms, beds, post_wait, number_of_amenities)
+
+max = apply(nn.data , 2 , max)
+min = apply(nn.data, 2 , min)
+scaled = as.data.frame(scale(nn.data, center = min, scale = max - min))
+
+
+nn.train <- train.data
+
+nn.train <- select(nn.train, log_price, latitude, longitude, accommodates, bathrooms, host_has_profile_pic, host_identity_verified, host_response_rate,  number_of_reviews, review_scores_rating, bedrooms, beds, post_wait, number_of_amenities)
+nn.train = na.omit(nn.train)
+
+max = apply(nn.train, 2 , max)
+min = apply(nn.train, 2 , min)
+trainNN = as.data.frame(scale(nn.train, center = min, scale = max - min))
+
+
+
+nn.test <- test.data
+
+nn.test <- select(nn.test, log_price, latitude, longitude, accommodates, bathrooms, host_has_profile_pic, host_identity_verified, host_response_rate,  number_of_reviews, review_scores_rating, bedrooms, beds, post_wait, number_of_amenities)
+nn.test = na.omit(nn.test)
+max = apply(nn.test , 2 , max)
+min = apply(nn.test, 2 , min)
+testNN= as.data.frame(scale(nn.test, center = min, scale = max - min))
+
+
+## Fit neural network 
+
+# install library
+#install.packages("neuralnet")
+
+# load library
+library(neuralnet)
+
+# fit neural network
+set.seed(1)
+NN = neuralnet(log_price ~., trainNN, hidden = rep.int(5,times = 2) , linear.output = T, stepmax=1e7 )
+
+# plot neural network
+plot(NN,  col.hidden.synapse='lightblue2', col.hidden='lightskyblue2', col.intercept='gray48', show.weights = FALSE)
+
+ ## Prediction using neural network
+
+predict_testNN = compute(NN, testNN[,c(1:14)])
+predict_testNN = (predict_testNN$net.result * (max(nn.data$log_price) - min(nn.data$log_price))) + min(nn.data$log_price)
+
+plot(nn.test$log_price, predict_testNN, col='lightblue', pch=16, ylab = "predicted log_price NN", xlab = "real log_price")
+par(new=TRUE)
+abline(0,1,col="pink3")
+
+# Calculate Root Mean Square Error (RMSE)
+MSE.NN = (sum((nn.test$log_price - predict_testNN)^2) / nrow(nn.test))
+MSE.NN
+```
+
+```{r nn3}
+# fit neural network
+set.seed(1)
+NN3 = neuralnet(log_price ~., trainNN, hidden = rep.int(3,times = 1) , linear.output = T, stepmax=1e7 )
+
+# plot neural network
+plot(NN3,  col.hidden.synapse='lightblue2', col.hidden='lightskyblue2', col.intercept='gray48', show.weights = FALSE)
+
+ ## Prediction using neural network
+
+predict_testNN = compute(NN3, testNN[,c(1:14)])
+predict_testNN = (predict_testNN$net.result * (max(nn.data$log_price) - min(nn.data$log_price))) + min(nn.data$log_price)
+
+plot(nn.test$log_price, predict_testNN, col='lightblue', pch=16, ylab = "predicted log_price NN", xlab = "real log_price")
+par(new=TRUE)
+abline(0,1,col="pink3")
+
+# Calculate Root Mean Square Error (RMSE)
+MSE.NN = (sum((nn.test$log_price - predict_testNN)^2) / nrow(nn.test))
+MSE.NN
+```

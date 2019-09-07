@@ -1,0 +1,101 @@
+---
+title: "linear regression"
+author: "Zhirui Shi"
+date: "September 4, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(zoo)
+library(lubridate)
+library(ggplot2)
+library(stringr)
+
+library(ISLR)
+library(leaps)
+library(glmnet)
+
+```
+
+```{r input data}
+load("bnb_data.Rdata")
+```
+```{r linear regression}
+### Cross-validation
+# create the function 
+predict.regsubsets=function(object,newdata,id,...){
+  form=as.formula(object$call[[2]])
+  mat=model.matrix(form,newdata)
+  coefi=coef(object,id=id)
+  xvars=names(coefi)
+  mat[,xvars]%*%coefi
+}
+
+# forward selection on the full dataset
+reg.data <- train.data
+
+reg.data <- select(reg.data, log_price, latitude, longitude, property_type, room_type, accommodates, bathrooms, bed_type, cancellation_policy, cleaning_fee, host_has_profile_pic, host_identity_verified, host_response_rate, instant_bookable, number_of_reviews, review_scores_rating, bedrooms, beds, post_wait, number_of_amenities)
+
+reg_test.data <- test.data
+
+reg_test.data <- select(reg_test.data, log_price, latitude, longitude, property_type, room_type, accommodates, bathrooms, bed_type, cancellation_policy, cleaning_fee, host_has_profile_pic, host_identity_verified, host_response_rate, instant_bookable, number_of_reviews, review_scores_rating, bedrooms, beds, post_wait, number_of_amenities)
+
+k=10
+set.seed(1)
+# ramdomly assign the observations into different folds
+folds=sample(1:k,nrow(reg.data),replace=TRUE) 
+
+cv.errors=matrix(NA,k,54, dimnames=list(NULL, paste(1:54)))
+for(j in 1:k){
+  best.fit=regsubsets(log_price~.,data=reg.data[folds!=j,],nvmax=60, method="forward")
+  for(i in 1:54){
+    pred=predict.regsubsets(best.fit,reg.data[folds==j,],id=i) # test on the j-th subset
+    cv.errors[j,i]=mean( (reg.data$log_price[folds==j]-pred)^2)
+  }
+}
+mean.cv.errors=apply(cv.errors,2,mean) # average errors
+mean.cv.errors
+
+# find the optimal model
+which.min(mean.cv.errors)
+
+par(mfrow=c(1,1))
+plot(mean.cv.errors,type='b')
+reg.best=regsubsets(log_price~.,data=reg.data, nvmax=59, method = "forward")
+coef=coef(reg.best,54)
+
+test.mat=model.matrix(log_price~.,data=reg_test.data)
+
+pred=test.mat[,names(coef)] %*% coef
+val.errors=mean((reg_test.data$log_price-pred)^2)
+val.errors
+```
+
+```{r linear-LASSO}
+x=model.matrix(log_price~.,reg.data)[,-1]
+y=reg.data$log_price
+
+x_test=model.matrix(log_price~.,reg_test.data)[,-1]
+y_test=reg_test.data$log_price
+
+grid=10^seq(-1,-5,length=50)
+lasso.mod=glmnet(x,y,alpha=1,lambda=grid)
+plot(lasso.mod,xlab="??") 
+
+set.seed(1)
+cv.out=cv.glmnet(x,y,alpha=1, lambda=grid)
+plot(cv.out,xlab="log??")
+bestlam=cv.out$lambda.min
+
+lasso.pred=predict(lasso.mod,s=bestlam,newx=x_test)
+mean((lasso.pred-y_test)^2)
+
+out=glmnet(x,y,alpha=1,lambda=grid)
+lasso.coef=predict(out,type="coefficients",s=bestlam)[1:60,]
+lasso.coef
+coef_fina = lasso.coef[lasso.coef!=0]
+```

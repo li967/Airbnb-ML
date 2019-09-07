@@ -1,0 +1,193 @@
+---
+title: "Data Cleaning"
+author: "Yuxuan Li"
+date: "8/28/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(zoo)
+library(lubridate)
+library(ggplot2)
+library(stringr)
+
+# packages for word cloud
+# install.packages("tm")  # for text mining
+# install.packages("SnowballC") # for text stemming
+# install.packages("wordcloud") # word-cloud generator 
+# install.packages("RColorBrewer") # color palettes
+library("tm")
+library("SnowballC")
+library("wordcloud")
+library("RColorBrewer")
+
+# read airbnb.data from csv file
+bnb.raw <- read.csv("airbnb_data.csv") 
+```
+
+# processing data and save to "bnb_data.Rdata"
+* date (as data, date length between host_since and first review)
+* ammenity (described later(maybe))
+* NA's (described later)
+* zipcode (add 0 to beginning)
+* host_response_rate: percentage to digits
+* qualitative vars:
+  + room_type (Entire house/apt) -> is_Entire
+  + room_type (Entire/Private) -> is_Private
+  + bed_type -> is_RealBed 
+  + Cancellation policy (if somewhat strict) -> is_CancelStrict
+  
+## NA's 
+8333 obs have NA's. In the dataset, 2 types of NA's are observed: random and systematical.
+* Random NA's are rare, randomly happened, including
+  + bathrooms 95
+  + bedrooms 41
+  + beds 59
+  + host_has_profile_pic 91
+  + host_identity_verified 91
+  + host_since 91
+  
+* Systematical NA's are typically because of no review, including:
+  + first_review: 7717
+  + last_review: 7696
+  + review_scores_rating: 8143
+
+We simply dropped random NA's. For systimatical one's, we assign sample mean to review_scores_rating, and sample max to post_wait, which is the day-difference between host_since and first_review. Then remove first_review and last_review. 
+  
+## amenities
+
+Hosts list their amenities. 
+
+```{r readdata}
+# deal with date and zipcode
+bnb.data <- bnb.raw %>% # date
+  mutate(host_since   = as.Date(host_since,   format = "%m/%d/%y"),
+         first_review = as.Date(first_review, format = "%m/%d/%y"),
+         last_review  = as.Date(last_review,  format = "%m/%d/%y")) %>%
+  mutate(post_wait = time_length(host_since %--% first_review, unit = "day")) %>%
+  mutate(zipcode = as.character(zipcode)) %>% # zipcode
+  mutate(zipcode = str_pad(zipcode,5,side="left",pad="0"))
+
+# deal with '%'
+bnb.data <- bnb.data %>%
+  mutate(host_response_rate = as.character(host_response_rate),
+         host_response_rate = str_sub(host_response_rate,1L,-2L), #remove "%"
+         host_response_rate = as.numeric(host_response_rate)*0.01) # trans to digit
+
+# Deal with NA's
+  # systematical
+  score_mean <- mean(na.omit(bnb.data$review_scores_rating))
+  response_mean <- mean(na.omit(bnb.data$host_response_rate))
+  wait_max <- max(na.omit(bnb.data$post_wait))
+  bnb.data <- bnb.data %>%
+    mutate(review_scores_rating = ifelse(is.na(review_scores_rating)==TRUE,score_mean,
+                                         review_scores_rating),
+           host_response_rate = ifelse(is.na(host_response_rate)==TRUE, response_mean,
+                                       host_response_rate),
+           post_wait = ifelse(is.na(post_wait)==TRUE,wait_max,post_wait)) %>%
+    dplyr::select(-first_review, -last_review)
+  # ramdom
+  bnb.data <- na.omit(bnb.data)
+
+# deal with amenities
+bnb.data <- bnb.data %>%
+  mutate(amenities = as.character(amenities)) %>%
+  mutate(number_of_amenities = 1 + str_count(amenities, ",")) %>%
+  mutate(am_Internet = (str_detect(amenities, "Internet") | 
+           str_detect(amenities, "Wireless Internet")),
+         am_TV = (str_detect(amenities, "TV") | str_detect(amenities, "Cable TV")),
+         am_AC = str_detect(amenities, "Air conditioning"),
+         am_Kitchen = str_detect(amenities, "Kitchen"),
+         am_Heating = str_detect(amenities, "Heating"),
+         am_Washer = str_detect(amenities, "Washer"),
+         am_Dryer = str_detect(amenities, "Dryer"),
+         am_Parking = str_detect(amenities, "Free parking on premises"),
+         am_Shampoo = str_detect(amenities, "Shampoo"),
+         am_Smoke = str_detect(amenities, "Smoke detector"),
+         am_Hangers = str_detect(amenities, "Hangers"),
+         am_Iron = str_detect(amenities, "Iron"),
+         am_Fire = str_detect(amenities, "Fire extinguisher"),
+         am_Firstaid = str_detect(amenities, "First aid kit"))
+
+# add has_review for those has review
+bnb.data <- bnb.data %>%
+  mutate(has_review = ifelse(number_of_reviews==0,0,1),
+         has_review = as.factor(has_review))
+
+# Deal with qualitative data
+bnb.data <- bnb.data %>%
+  mutate(is_Entire = ifelse(room_type == "Entire home/apt", 1,0),
+         is_Private = ifelse(room_type != "Shared room", 1,0),
+         is_RealBed = ifelse(bed_type == "Real Bed",1,0),
+         is_CancelStrict = ifelse((cancellation_policy == "moderate" | 
+                                    cancellation_policy == "flexible"),0,1)) %>%
+  mutate(cleanning_fee = ifelse(cleaning_fee == FALSE,0,1),
+         host_has_profile_pic = ifelse(host_has_profile_pic=="f",0,ifelse(host_has_profile_pic == "t",1, NA)),
+         host_identity_verified = ifelse(host_identity_verified == "f",0,ifelse(host_identity_verified=="t",1,host_identity_verified)),
+         instant_bookable = ifelse(instant_bookable=="t",1,0))
+
+
+# remove outlier (the one with log-price == 0)
+bnb.data <- filter(bnb.data, log_price != 0)
+
+
+# split training and testing
+set.seed(1)
+train <- sample(nrow(bnb.data), 0.75*nrow(bnb.data))
+train.data <- bnb.data[train,]
+test.data <- bnb.data[-train,] 
+
+
+save(bnb.data,train.data,test.data, file = "bnb_data.Rdata")
+
+# resplit training and testing
+train.data <- filter(bnb.data, city != "Boston")
+test.data  <- filter(bnb.data, city == "Boston")
+save(bnb.data, train.data, test.data, file = "bnb_city.Rdata")
+
+```
+
+```{r amme}
+# http://www.sthda.com/english/wiki/text-mining-and-word-cloud-fundamentals-in-r-5-simple-steps-you-should-know 
+
+# find Top10 listed amenities
+ame <- str_c(bnb.data$amenities, sep = "", collapse = "") %>%
+       str_to_title() %>%
+       str_replace_all(" ", "") %>%
+       str_replace_all("\\{", "") %>%
+       str_replace_all("\\}", "") %>%
+       str_replace_all(",", " ")
+# Load the data as a corpus
+docs <- Corpus(VectorSource(ame))
+
+# text transformation
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+docs <- tm_map(docs, toSpace, "\"")
+
+
+# Build a term-document matrix
+dtm <- TermDocumentMatrix(docs)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+
+write.table(d, file = "top_listed_amenity.txt", sep = ",", quote = FALSE, row.names = F)
+
+# Word cloud
+set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"),
+          scale = c(2.5,1))
+```
+
+```{r summ}
+
+summary(bnb.data)
+
+```
